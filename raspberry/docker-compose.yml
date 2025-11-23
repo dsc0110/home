@@ -1,0 +1,49 @@
+services:
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      - "80:80/tcp"
+      # - "8080:80/tcp"
+      # - "443:443/tcp"
+    environment:
+      TZ: ${TZ}
+      PIHOLE_UID: ${PUID}
+      PIHOLE_GID: ${PGID}
+      FTLCONF_dns_listeningMode: 'all' # If using Docker's default `bridge` network setting the dns listening mode should be set to 'all'
+      FTLCONF_dns_piholePTR: 'PI.HOLE'
+      FTLCONF_dns_revServers: 'true,${LOCAL_NETWORK},${ROUTER_IP},lan'
+      FTLCONF_dns_domain_name: 'lan'
+      FTLCONF_webserver_api_password: ${FTLCONF_webserver_api_password}
+    volumes:
+      - ${DOCKERCONFDIR}/pihole/etc/pihole:/etc/pihole
+
+  home-assistant:
+    container_name: home-assistant
+    image: ghcr.io/home-assistant/home-assistant:stable
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-file: ${DOCKERLOGGING_MAXFILE}
+        max-size: ${DOCKERLOGGING_MAXSIZE}
+    network_mode: host
+    privileged: true
+    volumes:
+      - ${DOCKERCONFDIR}/home-assistant/config:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    devices:
+      - /dev/ttyACM0
+    environment:
+      - TZ=${TZ}
+      
