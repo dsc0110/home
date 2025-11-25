@@ -1,5 +1,45 @@
 services:
 
+  traefik:
+    container_name: traefik
+    image: traefik:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - proxy
+    ports:
+      - 80:80
+      - 443:443
+      # - 443:443/tcp # Uncomment if you want HTTP3
+      # - 443:443/udp # Uncomment if you want HTTP3
+    environment:
+      CF_DNS_API_TOKEN: ${CF_DNS_API_TOKEN}
+      TRAEFIK_DASHBOARD_CREDENTIALS: ${TRAEFIK_DASHBOARD_CREDENTIALS}
+    env_file: .env #kann weg
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${DOCKERCONFDIR}/traefik/traefik.yml:/traefik.yml:ro
+      - ${DOCKERCONFDIR}/traefik/acme.json:/acme.json
+      # - ./data/config.yml:/config.yml:ro
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik.entrypoints=http"
+      - "traefik.http.routers.traefik.rule=Host(`traefik-dashboard.local.${MY_DOMAIN}`)"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_DASHBOARD_CREDENTIALS}"
+      - "traefik.http.middlewares.traefik-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.sslheader.headers.customrequestheaders.X-Forwarded-Proto=https"
+      - "traefik.http.routers.traefik.middlewares=traefik-https-redirect"
+      - "traefik.http.routers.traefik-secure.entrypoints=https"
+      - "traefik.http.routers.traefik-secure.rule=Host(`traefik-dashboard.local.${MY_DOMAIN}`)"
+      - "traefik.http.routers.traefik-secure.middlewares=traefik-auth"
+      - "traefik.http.routers.traefik-secure.tls=true"
+      - "traefik.http.routers.traefik-secure.tls.certresolver=cloudflare"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].main=local.${MY_DOMAIN}"
+      - "traefik.http.routers.traefik-secure.tls.domains[0].sans=*.local.${MY_DOMAIN}"
+      - "traefik.http.routers.traefik-secure.service=api@internal"
+
   pihole:
     container_name: pihole
     image: pihole/pihole:latest
@@ -12,7 +52,7 @@ services:
     ports:
       - "53:53/tcp"
       - "53:53/udp"
-      - "80:80/tcp"
+      - "8080:80/tcp"
       # - "8080:80/tcp"
       # - "443:443/tcp"
     environment:
@@ -22,10 +62,16 @@ services:
       FTLCONF_dns_listeningMode: 'all' # If using Docker's default `bridge` network setting the dns listening mode should be set to 'all'
       FTLCONF_dns_piholePTR: 'PI.HOLE'
       FTLCONF_dns_revServers: 'true,${LOCAL_NETWORK},${ROUTER_IP},lan'
-      FTLCONF_dns_domain_name: 'lan'
+      FTLCONF_dns_domain_name: 'lan' # required?
       FTLCONF_webserver_api_password: ${FTLCONF_webserver_api_password}
     volumes:
       - ${DOCKERCONFDIR}/pihole/etc/pihole:/etc/pihole
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.pihole.rule=Host(`pihole.local.${MY_DOMAIN}`)"
+    #   - "traefik.http.routers.pihole.entrypoints=https"
+    #   - "traefik.http.routers.pihole.tls.certresolver=cloudflare"
+    #   - "traefik.http.services.pihole.loadbalancer.server.port=8080" # port?
 
   home-assistant:
     container_name: home-assistant
@@ -47,3 +93,6 @@ services:
     environment:
       - TZ=${TZ}
       
+networks:
+  proxy:
+    external: true
