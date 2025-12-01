@@ -56,8 +56,6 @@ services:
       - "53:53/tcp"
       - "53:53/udp"
       - "8081:80/tcp"
-      # - "80:80/tcp"
-      # - "443:443/tcp"
     environment:
       TZ: ${TZ}
       PIHOLE_UID: ${PUID}
@@ -99,6 +97,15 @@ services:
       - /dev/ttyACM0
     environment:
       - TZ=${TZ}
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.homeassistant.rule=Host(`homeassistant.local.${MY_DOMAIN}`)"
+    #   - "traefik.http.routers.homeassistant.entrypoints=https"
+    #   - "traefik.http.routers.homeassistant.tls=true"
+    #   - "traefik.http.routers.homeassistant.tls.certresolver=cloudflare"
+    #   - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+    # networks:
+    #   - proxy
       
 networks:
   proxy:
