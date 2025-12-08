@@ -2,7 +2,7 @@ services:
 
   traefik:
     container_name: traefik
-    image: traefik:latest
+    image: traefik:3.6.4
     restart: unless-stopped
     # security_opt:
     #   - no-new-privileges:true
@@ -81,6 +81,8 @@ services:
   home-assistant:
     container_name: home-assistant
     image: ghcr.io/home-assistant/home-assistant:stable
+    # networks:
+    #   - backend
     restart: unless-stopped
     logging:
       driver: json-file
@@ -97,16 +99,19 @@ services:
       - /dev/ttyACM0
     environment:
       - TZ=${TZ}
+      - PUID=${PUID}
+      - PGID=${PGID}
     # labels:
     #   - "traefik.enable=true"
     #   - "traefik.http.routers.homeassistant.rule=Host(`homeassistant.local.${MY_DOMAIN}`)"
+    #   - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
     #   - "traefik.http.routers.homeassistant.entrypoints=https"
     #   - "traefik.http.routers.homeassistant.tls=true"
     #   - "traefik.http.routers.homeassistant.tls.certresolver=cloudflare"
-    #   - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
     # networks:
     #   - proxy
       
 networks:
   proxy:
     external: true
+  # backend:
